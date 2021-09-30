@@ -202,16 +202,6 @@ func HandleWS(ctx context.Context, req events.APIGatewayWebsocketProxyRequest) (
 
 			graphql.Subscribe(subscribeParams)
 
-			err := Pub("NEW_MESSAGE", map[string]interface{}{
-				"id":   "17",
-				"text": "hello world",
-				"type": "bonjour",
-			})
-
-			if err != nil {
-				fmt.Printf("err: %v\n", err)
-				println(err)
-			}
 		}
 	}
 
