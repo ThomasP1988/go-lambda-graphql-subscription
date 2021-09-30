@@ -18,7 +18,7 @@ type Connection struct {
 	Context                 string      `dynamodbav:"context"`
 	IsInitialized           bool        `dynamodbav:"isInitialized"`
 	CreatedAt               *time.Time  `dynamodbav:"createdAt"`
-	WebsocketConnectContext interface{} `dynamodbav:"websockerConnectContext"`
+	WebsocketConnectContext interface{} `dynamodbav:"websocketConnectContext"`
 	ConnectContext          interface{} `dynamodbav:"connectContext"`
 	Ttl                     int64       `dynamodbav:"ttl"`
 }

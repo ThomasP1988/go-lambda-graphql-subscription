@@ -103,21 +103,6 @@ func HandleWS(ctx context.Context, req events.APIGatewayWebsocketProxyRequest) (
 		}, nil
 	} else if req.RequestContext.RouteKey == RouteKeyDefault {
 
-		err := CurrentManager.Connection.Hydrate(req.RequestContext.ConnectionID)
-
-		if err != nil {
-			fmt.Printf("error hydrating connection: %v\n", err)
-		}
-
-		connection, err := CurrentManager.Connection.Get(req.RequestContext.ConnectionID)
-		if err != nil {
-			log.Printf("failed to find connection, message: %v", err)
-			return events.APIGatewayProxyResponse{
-				Body:       "failed to find connection",
-				StatusCode: http.StatusNotFound,
-			}, nil
-		}
-
 		var msg Message
 		if err := json.Unmarshal([]byte(req.Body), &msg); err != nil {
 			log.Printf("failed to unmarshal websocket message: %v", err)
@@ -151,14 +136,31 @@ func HandleWS(ctx context.Context, req events.APIGatewayWebsocketProxyRequest) (
 			}
 
 			err = CurrentManager.Connection.Init(req.RequestContext.ConnectionID, connectContext)
-			fmt.Printf("err: %v\n", err)
-			println(err)
+
 			if err == nil {
 				common.SendMessage(req.RequestContext.ConnectionID, req.RequestContext.DomainName, req.RequestContext.Stage, message)
+			} else {
+				fmt.Printf("err: %v\n", err)
+				println(err)
 			}
 		} else if msg.Type == GraphQLConnectionTerminate {
 			println("connection terminate")
 			CurrentManager.Connection.Terminate(req.RequestContext.ConnectionID)
+		}
+
+		err := CurrentManager.Connection.Hydrate(req.RequestContext.ConnectionID)
+
+		if err != nil {
+			fmt.Printf("error hydrating connection: %v\n", err)
+		}
+
+		connection, err := CurrentManager.Connection.Get(req.RequestContext.ConnectionID)
+		if err != nil {
+			log.Printf("failed to find connection, message: %v", err)
+			return events.APIGatewayProxyResponse{
+				Body:       "failed to find connection",
+				StatusCode: http.StatusNotFound,
+			}, nil
 		}
 
 		fmt.Printf("connection: %v\n", connection)
@@ -202,6 +204,16 @@ func HandleWS(ctx context.Context, req events.APIGatewayWebsocketProxyRequest) (
 
 			graphql.Subscribe(subscribeParams)
 
+			// err := Pub("NEW_MESSAGE", map[string]interface{}{
+			// 	"id":   "17",
+			// 	"text": "hello world",
+			// 	"type": "bonjour",
+			// })
+
+			// if err != nil {
+			// 	fmt.Printf("err: %v\n", err)
+			// 	println(err)
+			// }
 		}
 	}
 
