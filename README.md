@@ -100,6 +100,21 @@ then simply set the manager, schema is the graphql.Schema struct that you define
 		},
 	})
    you need to return the manager.Sub function and pass the strings of the event you wish to subscribe, pass the given context as second argument
+   
+   publishing an event
+
+	err := Pub("NEW_MESSAGE", map[string]interface{}{
+		"id":   "17",
+		"text": "hello world",
+		"type": "bonjour",
+	})
+
+	if err != nil {
+		fmt.Printf("err: %v\n", err)
+		println(err)
+	}
+   
+   
 
 On the websocket lambda function
 
@@ -159,7 +174,30 @@ Then pass one of multiple function to the manager
         OnConnect:          &OnConnect,
         OnDisconnect:       &OnDisconnect,
       })
-      
+     
+ You can access the data you've put in the context this way
+
+	graphql.NewObject(graphql.ObjectConfig{
+			Name: "RootSubscription",
+			Fields: graphql.Fields{
+				"messageFeed": &graphql.Field{
+					Type: MessageChatType,
+					Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+						lambdaContext := p.Context.Value(manager.WSContextKey).(manager.WSlambdaContext)
+						fmt.Printf("resolve lambdaContext: %v\n", lambdaContext)
+
+						return p.Source, nil
+					},
+					Subscribe: func(p graphql.ResolveParams) (interface{}, error) {
+						lambdaContext := p.Context.Value(manager.WSContextKey).(manager.WSlambdaContext)
+						fmt.Printf("subscribe lambdaContext: %v\n", lambdaContext)
+
+						return manager.Sub([]string{"NEW_MESSAGE"}, p.Context)
+					},
+				},
+			},
+		})
+     
 # Example
 
 If you want to see an implementation of the library, you can find it here https://github.com/ThomasP1988/go-lambda-graphql-subscription-example
