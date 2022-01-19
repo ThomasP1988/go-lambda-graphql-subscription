@@ -139,7 +139,9 @@ func HandleWS(ctx context.Context, req events.APIGatewayWebsocketProxyRequest) (
 
 			if err == nil {
 				err = common.SendMessage(req.RequestContext.ConnectionID, req.RequestContext.DomainName, req.RequestContext.Stage, message)
-				fmt.Printf("err sending message: %v\n", err)
+				if err != nil {
+					fmt.Printf("err sending message: %v\n", err)
+				}
 			} else {
 				fmt.Printf("err: %v\n", err)
 				println(err)

@@ -71,13 +71,13 @@ func AddOne(client *dynamodb.Client, tableName *string, item interface{}) error 
 		TableName: tableName,
 	}
 
-	putOutput, err := client.PutItem(context.TODO(), input)
+	_, err = client.PutItem(context.Background(), input)
 
 	if err != nil {
+		fmt.Printf("err: %v\n", err)
 		return err
 	}
 
-	attributevalue.UnmarshalMap(putOutput.Attributes, item)
 	return nil
 }
 
