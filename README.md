@@ -3,7 +3,7 @@ Library to use graphql subscriptions with lambda serverless
 
 This library should be used with https://github.com/graphql-go/graphql
 
-This library is highly inspied by https://github.com/michalkvasnicak/aws-lambda-graphql I had to adapt some part to fit with Go but tried to keep the spirit.
+This library is highly inspired by https://github.com/michalkvasnicak/aws-lambda-graphql I had to adapt some part to fit with Go but tried to keep the spirit.
 It is implemented to work only with DynamoDB, Redis isn't at the moment, PR welcome.
 
 # Getting started (DynamoDB)
