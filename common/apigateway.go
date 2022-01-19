@@ -17,11 +17,15 @@ func SendMessage(connectionID, domain, stage string, data []byte) error {
 		if err != nil {
 			return err
 		}
-		apiClient.PostToConnection(context.Background(), &apigatewaymanagementapi.PostToConnectionInput{
-			ConnectionId: aws.String(connectionID),
-			Data:         data,
-		})
 	}
+	_, err := apiClient.PostToConnection(context.Background(), &apigatewaymanagementapi.PostToConnectionInput{
+		ConnectionId: aws.String(connectionID),
+		Data:         data,
+	})
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 

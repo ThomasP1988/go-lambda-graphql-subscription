@@ -102,7 +102,7 @@ func HandleWS(ctx context.Context, req events.APIGatewayWebsocketProxyRequest) (
 			StatusCode: http.StatusOK,
 		}, nil
 	} else if req.RequestContext.RouteKey == RouteKeyDefault {
-
+		fmt.Printf("req.Body: %v\n", req.Body)
 		var msg Message
 		if err := json.Unmarshal([]byte(req.Body), &msg); err != nil {
 			log.Printf("failed to unmarshal websocket message: %v", err)
@@ -138,7 +138,8 @@ func HandleWS(ctx context.Context, req events.APIGatewayWebsocketProxyRequest) (
 			err = CurrentManager.Connection.Init(req.RequestContext.ConnectionID, connectContext)
 
 			if err == nil {
-				common.SendMessage(req.RequestContext.ConnectionID, req.RequestContext.DomainName, req.RequestContext.Stage, message)
+				err = common.SendMessage(req.RequestContext.ConnectionID, req.RequestContext.DomainName, req.RequestContext.Stage, message)
+				fmt.Printf("err sending message: %v\n", err)
 			} else {
 				fmt.Printf("err: %v\n", err)
 				println(err)
@@ -184,25 +185,46 @@ func HandleWS(ctx context.Context, req events.APIGatewayWebsocketProxyRequest) (
 		} else if msg.Type == GraphQLSubStart {
 			// add to table
 			println("start")
-			subscribeParams := graphql.Params{
-				Context: context.WithValue(ctx, WSContextKey, WSlambdaContext{
-					ConnectionID:            req.RequestContext.ConnectionID,
-					Stage:                   req.RequestContext.Stage,
-					DomainName:              req.RequestContext.DomainName,
-					OperationID:             msg.OperationID,
-					RequestString:           msg.Payload.Query,
-					Variables:               msg.Payload.Variables,
-					OperationName:           msg.Payload.OperationName,
-					WebsocketConnectContext: connection.WebsocketConnectContext,
-					ConnectContext:          connection.ConnectContext,
-				}),
-				RequestString:  msg.Payload.Query,
-				Schema:         *CurrentManager.Schema,
-				VariableValues: msg.Payload.Variables,
-				OperationName:  msg.Payload.OperationName,
-			}
 
-			graphql.Subscribe(subscribeParams)
+			if strings.HasPrefix(msg.Payload.Query, "subscription") {
+				subscribeParams := graphql.Params{
+					Context: context.WithValue(ctx, WSContextKey, WSlambdaContext{
+						ConnectionID:            req.RequestContext.ConnectionID,
+						Stage:                   req.RequestContext.Stage,
+						DomainName:              req.RequestContext.DomainName,
+						OperationID:             msg.OperationID,
+						RequestString:           msg.Payload.Query,
+						Variables:               msg.Payload.Variables,
+						OperationName:           msg.Payload.OperationName,
+						WebsocketConnectContext: connection.WebsocketConnectContext,
+						ConnectContext:          connection.ConnectContext,
+					}),
+					RequestString:  msg.Payload.Query,
+					Schema:         *CurrentManager.Schema,
+					VariableValues: msg.Payload.Variables,
+					OperationName:  msg.Payload.OperationName,
+				}
+
+				graphql.Subscribe(subscribeParams)
+			} else {
+				var payloadInterface map[string]interface{}
+				inrec, _ := json.Marshal(msg.Payload)
+				json.Unmarshal(inrec, &payloadInterface)
+				Execute(
+					msg.OperationID,
+					connection.Id,
+					connection.Domain,
+					connection.Stage,
+					&graphql.Params{
+						Schema:         *CurrentManager.Schema,
+						RequestString:  msg.Payload.Query,
+						VariableValues: msg.Payload.Variables,
+						RootObject:     payloadInterface,
+						OperationName:  msg.Payload.OperationName,
+						Context:        ctx,
+					},
+				)
+			}
 
 			// err := Pub("NEW_MESSAGE", map[string]interface{}{
 			// 	"id":   "17",
