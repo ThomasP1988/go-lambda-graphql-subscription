@@ -11,14 +11,14 @@ import (
 var apiClient *apigatewaymanagementapi.Client
 var err error
 
-func SendMessage(connectionID, domain, stage string, data []byte) error {
+func SendMessage(ctx context.Context, connectionID, domain, stage string, data []byte) error {
 	if apiClient == nil {
 		apiClient, err = NewAPIGatewayManagementClient(domain, stage)
 		if err != nil {
 			return err
 		}
 	}
-	_, err := apiClient.PostToConnection(context.Background(), &apigatewaymanagementapi.PostToConnectionInput{
+	_, err := apiClient.PostToConnection(ctx, &apigatewaymanagementapi.PostToConnectionInput{
 		ConnectionId: aws.String(connectionID),
 		Data:         data,
 	})

@@ -1,6 +1,7 @@
 package dynamodb
 
 import (
+	"context"
 	"errors"
 
 	common "github.com/ThomasP1988/go-lambda-graphql-subscription/common"
@@ -49,10 +50,10 @@ func NewDynamoDBEventManager(params *DynamoDBEventManagerArgs) (*DynamoDBEventMa
 	return &eventManager, nil
 }
 
-func (cm *DynamoDBEventManager) Add(newEvent *manager.Event) error {
-	return cm.Client.Add(newEvent)
+func (cm *DynamoDBEventManager) Add(ctx context.Context, newEvent *manager.Event) error {
+	return cm.Client.Add(ctx, newEvent)
 }
 
-func (cm *DynamoDBEventManager) Remove(eventID string) error {
-	return cm.Client.Delete(eventID)
+func (cm *DynamoDBEventManager) Remove(ctx context.Context, eventID string) error {
+	return cm.Client.Delete(ctx, eventID)
 }

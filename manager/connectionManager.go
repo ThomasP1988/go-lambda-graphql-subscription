@@ -1,14 +1,17 @@
 package manager
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 type ConnectionManager interface {
-	OnConnect(newConnection *Connection) error
-	OnDisconnect(connectionID string) error
-	Get(connectionID string) (*Connection, error)
-	Init(connectionID string, connectContext interface{}) error
-	Terminate(connectionID string) error
-	Hydrate(connectionId string) error
+	OnConnect(ctx context.Context, newConnection *Connection) error
+	OnDisconnect(ctx context.Context, connectionID string) error
+	Get(ctx context.Context, connectionID string) (*Connection, error)
+	Init(ctx context.Context, connectionID string, connectContext interface{}) error
+	Terminate(ctx context.Context, connectionID string) error
+	Hydrate(ctx context.Context, connectionId string) error
 }
 
 type Connection struct {

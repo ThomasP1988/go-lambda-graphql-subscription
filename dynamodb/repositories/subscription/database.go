@@ -20,9 +20,9 @@ type Database struct {
 	IndexName string
 }
 
-func (udb *Database) GetOne(connectionID string) (*manager.Subscription, error) {
+func (udb *Database) GetOne(ctx context.Context, connectionID string) (*manager.Subscription, error) {
 	connection := &manager.Subscription{}
-	doesntExist, err := common.GetOne(udb.Client, &udb.TableName, connection, map[string]interface{}{
+	doesntExist, err := common.GetOne(ctx, udb.Client, &udb.TableName, connection, map[string]interface{}{
 		"connectionId": connectionID,
 	}, nil)
 
@@ -33,17 +33,20 @@ func (udb *Database) GetOne(connectionID string) (*manager.Subscription, error) 
 	return connection, err
 }
 
-func (udb *Database) Add(newSubscription *manager.Subscription) error {
+func (udb *Database) Add(ctx context.Context, newSubscription *manager.Subscription) error {
 	println("AddAddAdd")
 	fmt.Printf("udb.TableName: %v\n", udb.TableName)
-	return common.AddOne(udb.Client, &udb.TableName, newSubscription)
+	return common.AddOne(ctx, udb.Client, &udb.TableName, newSubscription)
 }
 
-func (udb *Database) List(eventKey string, from *string) (*manager.SubscriptionResponse, error) {
-
+func (udb *Database) List(ctx context.Context, eventKey string, from *string) (*manager.SubscriptionResponse, error) {
+	if from != nil {
+		fmt.Printf("from: %v\n", *from)
+	}
 	subscriptions := &[]manager.Subscription{}
 	var limit int32 = 1
 	args := common.ListArgs{
+		Ctx:       ctx,
 		Client:    udb.Client,
 		TableName: &udb.TableName,
 		Output:    subscriptions,
@@ -82,28 +85,29 @@ func (udb *Database) List(eventKey string, from *string) (*manager.SubscriptionR
 	fmt.Printf("lastEvaluatedKey: %v\n", lastEvaluatedKey)
 
 	var subLast manager.Subscription
-	var next string
+	var next *string
 	if len(lastEvaluatedKey) > 0 {
 		err = attributevalue.UnmarshalMap(lastEvaluatedKey, &subLast)
 		if err != nil {
 			println("UnmarshalMap last evaluated key err: " + err.Error())
 		} else {
-			next += subLast.ConnectionID + separator + subLast.Event
+			nextStr := subLast.ConnectionID + separator + subLast.Event
+			next = &nextStr
 		}
 	}
 
 	response := &manager.SubscriptionResponse{
 		Items: subscriptions,
-		Next:  &next,
+		Next:  next,
 	}
 
 	return response, nil
 }
 
-func (udb *Database) Delete(connectionID string, operationID string) error {
+func (udb *Database) Delete(ctx context.Context, connectionID string, operationID string) error {
 	subscription := &manager.Subscription{}
 
-	doesntExist, err := common.GetOne(udb.Client, &udb.TableName, subscription, map[string]interface{}{
+	doesntExist, err := common.GetOne(ctx, udb.Client, &udb.TableName, subscription, map[string]interface{}{
 		"connectionId": connectionID,
 		"operationId":  operationID,
 	}, &udb.IndexName)
@@ -116,7 +120,7 @@ func (udb *Database) Delete(connectionID string, operationID string) error {
 		return err
 	}
 
-	output, err := udb.Client.DeleteItem(context.TODO(), &dynamodb.DeleteItemInput{
+	output, err := udb.Client.DeleteItem(ctx, &dynamodb.DeleteItemInput{
 		Key: map[string]types.AttributeValue{
 			"event": &types.AttributeValueMemberS{
 				Value: subscription.Event,

@@ -67,7 +67,7 @@ func Sub(keys []string, ctx context.Context) (interface{}, error) {
 
 		fmt.Printf("sbs: %v\n", sbs)
 		fmt.Printf("\"ici\": %v\n", "ici")
-		err := CurrentManager.Subscription.Start(sbs)
+		err := CurrentManager.Subscription.Start(ctx, sbs)
 		fmt.Printf("\"la\": %v\n", "la")
 
 		if err != nil {
@@ -87,7 +87,7 @@ func Sub(keys []string, ctx context.Context) (interface{}, error) {
 	return response, nil
 }
 
-func Pub(key string, payload map[string]interface{}) error {
+func Pub(ctx context.Context, key string, payload interface{}) error {
 	if CurrentManager == nil {
 		return errors.New("manager isn't set")
 	}
@@ -106,7 +106,7 @@ func Pub(key string, payload map[string]interface{}) error {
 		Payload: string(jsonPayload),
 	}
 
-	err = CurrentManager.Event.Add(newEvent)
+	err = CurrentManager.Event.Add(ctx, newEvent)
 
 	if err != nil {
 		return err
@@ -116,6 +116,7 @@ func Pub(key string, payload map[string]interface{}) error {
 }
 
 func Execute(
+	ctx context.Context,
 	operationID string,
 	connectionID string,
 	domainName string,
@@ -135,7 +136,7 @@ func Execute(
 		println("err marshalling message", err)
 	}
 
-	err = common.SendMessage(connectionID, domainName, stage, message)
+	err = common.SendMessage(ctx, connectionID, domainName, stage, message)
 
 	if err != nil {
 		fmt.Printf("err sending message: %v\n", err)

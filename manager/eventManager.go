@@ -1,8 +1,10 @@
 package manager
 
+import "context"
+
 type EventManager interface {
-	Add(newEvent *Event) error
-	Remove(eventId string) error
+	Add(ctx context.Context, newEvent *Event) error
+	Remove(ctx context.Context, eventId string) error
 }
 
 type Event struct {

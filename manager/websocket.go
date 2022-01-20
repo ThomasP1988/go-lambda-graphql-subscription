@@ -57,7 +57,7 @@ func HandleWS(ctx context.Context, req events.APIGatewayWebsocketProxyRequest) (
 			newConnection.WebsocketConnectContext = response
 		}
 
-		err := CurrentManager.Connection.OnConnect(newConnection)
+		err := CurrentManager.Connection.OnConnect(ctx, newConnection)
 
 		if err != nil {
 
@@ -83,7 +83,7 @@ func HandleWS(ctx context.Context, req events.APIGatewayWebsocketProxyRequest) (
 		}, nil
 	} else if req.RequestContext.RouteKey == RouteKeyDisconnect {
 
-		connection, err := CurrentManager.Connection.Get(req.RequestContext.ConnectionID)
+		connection, err := CurrentManager.Connection.Get(ctx, req.RequestContext.ConnectionID)
 		if err != nil {
 			log.Printf("failed to find connection, message: %v", err)
 			return events.APIGatewayProxyResponse{
@@ -96,7 +96,7 @@ func HandleWS(ctx context.Context, req events.APIGatewayWebsocketProxyRequest) (
 			(*CurrentManager.OnDisconnect)(connection)
 		}
 
-		CurrentManager.Connection.OnDisconnect(req.RequestContext.ConnectionID)
+		CurrentManager.Connection.OnDisconnect(ctx, req.RequestContext.ConnectionID)
 		return events.APIGatewayProxyResponse{
 			Body:       "",
 			StatusCode: http.StatusOK,
@@ -135,10 +135,10 @@ func HandleWS(ctx context.Context, req events.APIGatewayWebsocketProxyRequest) (
 
 			}
 
-			err = CurrentManager.Connection.Init(req.RequestContext.ConnectionID, connectContext)
+			err = CurrentManager.Connection.Init(ctx, req.RequestContext.ConnectionID, connectContext)
 
 			if err == nil {
-				err = common.SendMessage(req.RequestContext.ConnectionID, req.RequestContext.DomainName, req.RequestContext.Stage, message)
+				err = common.SendMessage(ctx, req.RequestContext.ConnectionID, req.RequestContext.DomainName, req.RequestContext.Stage, message)
 				if err != nil {
 					fmt.Printf("err sending message: %v\n", err)
 				}
@@ -148,16 +148,16 @@ func HandleWS(ctx context.Context, req events.APIGatewayWebsocketProxyRequest) (
 			}
 		} else if msg.Type == GraphQLConnectionTerminate {
 			println("connection terminate")
-			CurrentManager.Connection.Terminate(req.RequestContext.ConnectionID)
+			CurrentManager.Connection.Terminate(ctx, req.RequestContext.ConnectionID)
 		}
 
-		err := CurrentManager.Connection.Hydrate(req.RequestContext.ConnectionID)
+		err := CurrentManager.Connection.Hydrate(ctx, req.RequestContext.ConnectionID)
 
 		if err != nil {
 			fmt.Printf("error hydrating connection: %v\n", err)
 		}
 
-		connection, err := CurrentManager.Connection.Get(req.RequestContext.ConnectionID)
+		connection, err := CurrentManager.Connection.Get(ctx, req.RequestContext.ConnectionID)
 		if err != nil {
 			log.Printf("failed to find connection, message: %v", err)
 			return events.APIGatewayProxyResponse{
@@ -177,7 +177,7 @@ func HandleWS(ctx context.Context, req events.APIGatewayWebsocketProxyRequest) (
 		if msg.Type == GraphQLSubStop {
 			// remove from table
 			println("stop")
-			err := CurrentManager.Subscription.Stop(req.RequestContext.ConnectionID, msg.OperationID)
+			err := CurrentManager.Subscription.Stop(ctx, req.RequestContext.ConnectionID, msg.OperationID)
 			if err != nil {
 				return events.APIGatewayProxyResponse{
 					Body:       "",
@@ -207,12 +207,21 @@ func HandleWS(ctx context.Context, req events.APIGatewayWebsocketProxyRequest) (
 					OperationName:  msg.Payload.OperationName,
 				}
 
-				graphql.Subscribe(subscribeParams)
+				resultChan := graphql.Subscribe(subscribeParams)
+				fmt.Printf("resultChan: %v\n", resultChan)
+
+				result := <-resultChan
+
+				if result.HasErrors() {
+					fmt.Printf("result.Errors: %v\n", result.Errors)
+				}
+
 			} else {
 				var payloadInterface map[string]interface{}
 				inrec, _ := json.Marshal(msg.Payload)
 				json.Unmarshal(inrec, &payloadInterface)
 				Execute(
+					ctx,
 					msg.OperationID,
 					connection.Id,
 					connection.Domain,
@@ -273,7 +282,7 @@ func DynamoDBStream(ctx context.Context, req events.DynamoDBEvent) error {
 
 			for {
 
-				response, err := CurrentManager.Subscription.ListByEvents(key, from)
+				response, err := CurrentManager.Subscription.ListByEvents(ctx, key, from)
 
 				if err != nil {
 					fmt.Printf("err: %v\n", err)
@@ -290,7 +299,7 @@ func DynamoDBStream(ctx context.Context, req events.DynamoDBEvent) error {
 						continue
 					}
 
-					connection, err := CurrentManager.Connection.Get(sub.ConnectionID)
+					connection, err := CurrentManager.Connection.Get(ctx, sub.ConnectionID)
 
 					if err != nil {
 						fmt.Printf("err: %v\n", err)
@@ -298,6 +307,10 @@ func DynamoDBStream(ctx context.Context, req events.DynamoDBEvent) error {
 					}
 
 					if connection == nil || time.Unix(connection.Ttl, 0).Before(time.Now()) || !connection.IsInitialized {
+						if connection != nil {
+							fmt.Printf("connection: %v\n", *connection)
+						}
+						fmt.Printf("\"ttl reached or connection not initialised\": %v\n", "ttl reached or connection not initialised")
 						continue
 					}
 
@@ -314,6 +327,7 @@ func DynamoDBStream(ctx context.Context, req events.DynamoDBEvent) error {
 					})
 
 					Execute(
+						ctx,
 						sub.OperationID,
 						connection.Id,
 						connection.Domain,

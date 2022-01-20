@@ -1,9 +1,11 @@
 package manager
 
+import "context"
+
 type SubscriptionManager interface {
-	Start(subscription *Subscription) error
-	Stop(connectionID string, operationID string) error
-	ListByEvents(eventKey string, from *string) (*SubscriptionResponse, error)
+	Start(ctx context.Context, subscription *Subscription) error
+	Stop(ctx context.Context, connectionID string, operationID string) error
+	ListByEvents(ctx context.Context, eventKey string, from *string) (*SubscriptionResponse, error)
 }
 
 type SubscriptionResponse struct {

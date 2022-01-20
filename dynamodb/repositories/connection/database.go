@@ -17,9 +17,9 @@ type Database struct {
 	TableName string
 }
 
-func (udb *Database) GetOne(connectionID string) (*manager.Connection, error) {
+func (udb *Database) GetOne(ctx context.Context, connectionID string) (*manager.Connection, error) {
 	connection := &manager.Connection{}
-	doesntExist, err := common.GetOne(udb.Client, &udb.TableName, connection, map[string]interface{}{
+	doesntExist, err := common.GetOne(ctx, udb.Client, &udb.TableName, connection, map[string]interface{}{
 		"id": connectionID,
 	}, nil)
 
@@ -30,13 +30,13 @@ func (udb *Database) GetOne(connectionID string) (*manager.Connection, error) {
 	return connection, err
 }
 
-func (udb *Database) Add(newConnection *manager.Connection) error {
-	return common.AddOne(udb.Client, &udb.TableName, newConnection)
+func (udb *Database) Add(ctx context.Context, newConnection *manager.Connection) error {
+	return common.AddOne(ctx, udb.Client, &udb.TableName, newConnection)
 }
 
-func (udb *Database) Update(connectionID string, expr *expression.Expression) error {
+func (udb *Database) Update(ctx context.Context, connectionID string, expr *expression.Expression) error {
 
-	output, err := udb.Client.UpdateItem(context.TODO(), &dynamodb.UpdateItemInput{
+	output, err := udb.Client.UpdateItem(ctx, &dynamodb.UpdateItemInput{
 		Key: map[string]types.AttributeValue{
 			"id": &types.AttributeValueMemberS{
 				Value: connectionID,
@@ -52,8 +52,8 @@ func (udb *Database) Update(connectionID string, expr *expression.Expression) er
 	return err
 }
 
-func (udb *Database) Delete(connectionID string) error {
-	output, err := udb.Client.DeleteItem(context.TODO(), &dynamodb.DeleteItemInput{
+func (udb *Database) Delete(ctx context.Context, connectionID string) error {
+	output, err := udb.Client.DeleteItem(ctx, &dynamodb.DeleteItemInput{
 		Key: map[string]types.AttributeValue{
 			"id": &types.AttributeValueMemberS{
 				Value: connectionID,

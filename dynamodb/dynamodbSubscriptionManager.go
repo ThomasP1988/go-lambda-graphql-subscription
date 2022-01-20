@@ -1,6 +1,7 @@
 package dynamodb
 
 import (
+	"context"
 	"errors"
 	"time"
 
@@ -70,16 +71,16 @@ func NewDynamoDBSubscriptionManager(params *DynamoDBSubscriptionManagerArgs) (*D
 	return SubscriptionManager, nil
 }
 
-func (cm *DynamoDBSubscriptionManager) Start(subscription *manager.Subscription) error {
+func (cm *DynamoDBSubscriptionManager) Start(ctx context.Context, subscription *manager.Subscription) error {
 	println("StartStartStart")
 	subscription.Ttl = time.Now().Add(SubscriptionManager.Ttl).Unix()
-	return cm.Client.Add(subscription)
+	return cm.Client.Add(ctx, subscription)
 }
 
-func (cm *DynamoDBSubscriptionManager) Stop(connectionID string, operationID string) error {
-	return cm.Client.Delete(connectionID, operationID)
+func (cm *DynamoDBSubscriptionManager) Stop(ctx context.Context, connectionID string, operationID string) error {
+	return cm.Client.Delete(ctx, connectionID, operationID)
 }
 
-func (cm *DynamoDBSubscriptionManager) ListByEvents(eventKey string, from *string) (*manager.SubscriptionResponse, error) {
-	return cm.Client.List(eventKey, from)
+func (cm *DynamoDBSubscriptionManager) ListByEvents(ctx context.Context, eventKey string, from *string) (*manager.SubscriptionResponse, error) {
+	return cm.Client.List(ctx, eventKey, from)
 }

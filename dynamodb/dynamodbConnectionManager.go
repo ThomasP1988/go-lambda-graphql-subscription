@@ -1,6 +1,7 @@
 package dynamodb
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
@@ -66,24 +67,24 @@ func NewDynamoDBConnectionManager(params *DynamoDBConnectionManagerArgs) (*Dynam
 	return &ConnectionManager, nil
 }
 
-func (cm *DynamoDBConnectionManager) OnConnect(newconnection *manager.Connection) error {
+func (cm *DynamoDBConnectionManager) OnConnect(ctx context.Context, newconnection *manager.Connection) error {
 	newconnection.Ttl = time.Now().Add(ConnectionManager.Ttl).Unix()
 	newconnection.IsInitialized = false
-	return cm.Client.Add(newconnection)
+	return cm.Client.Add(ctx, newconnection)
 }
 
-func (cm *DynamoDBConnectionManager) OnDisconnect(connectionID string) error {
+func (cm *DynamoDBConnectionManager) OnDisconnect(ctx context.Context, connectionID string) error {
 
 	// TODO: delete all subscription for this connectionID
 
-	return cm.Client.Delete(connectionID)
+	return cm.Client.Delete(ctx, connectionID)
 }
 
-func (cm *DynamoDBConnectionManager) Get(connectionID string) (*manager.Connection, error) {
-	return cm.Client.GetOne(connectionID)
+func (cm *DynamoDBConnectionManager) Get(ctx context.Context, connectionID string) (*manager.Connection, error) {
+	return cm.Client.GetOne(ctx, connectionID)
 }
 
-func (cm *DynamoDBConnectionManager) Init(connectionId string, connectContext interface{}) error {
+func (cm *DynamoDBConnectionManager) Init(ctx context.Context, connectionId string, connectContext interface{}) error {
 	updateBuilder := expression.UpdateBuilder{}.Set(expression.Name("isInitialized"), expression.Value(true))
 
 	if connectContext != nil {
@@ -96,10 +97,10 @@ func (cm *DynamoDBConnectionManager) Init(connectionId string, connectContext in
 		return err
 	}
 
-	return cm.Client.Update(connectionId, &expr)
+	return cm.Client.Update(ctx, connectionId, &expr)
 }
 
-func (cm *DynamoDBConnectionManager) Terminate(connectionId string) error {
+func (cm *DynamoDBConnectionManager) Terminate(ctx context.Context, connectionId string) error {
 
 	updateBuilder := expression.UpdateBuilder{}.Set(expression.Name("isInitialized"), expression.Value(false))
 	expr, err := expression.NewBuilder().WithUpdate(updateBuilder).Build()
@@ -109,10 +110,10 @@ func (cm *DynamoDBConnectionManager) Terminate(connectionId string) error {
 		return err
 	}
 
-	return cm.Client.Update(connectionId, &expr)
+	return cm.Client.Update(ctx, connectionId, &expr)
 }
 
-func (cm *DynamoDBConnectionManager) Hydrate(connectionId string) error {
+func (cm *DynamoDBConnectionManager) Hydrate(ctx context.Context, connectionId string) error {
 	updateBuilder := expression.UpdateBuilder{}.Set(expression.Name("ttl"), expression.Value(time.Now().Add(ConnectionManager.Ttl).Unix()))
 	expr, err := expression.NewBuilder().WithUpdate(updateBuilder).Build()
 
@@ -121,5 +122,5 @@ func (cm *DynamoDBConnectionManager) Hydrate(connectionId string) error {
 		return err
 	}
 
-	return cm.Client.Update(connectionId, &expr)
+	return cm.Client.Update(ctx, connectionId, &expr)
 }

@@ -10,7 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
-func GetOne(client *dynamodb.Client, tableName *string, output interface{}, keys map[string]interface{}, indexName *string) (bool, error) {
+func GetOne(ctx context.Context, client *dynamodb.Client, tableName *string, output interface{}, keys map[string]interface{}, indexName *string) (bool, error) {
 	var keyCond *expression.KeyConditionBuilder
 
 	for k, v := range keys {
@@ -39,7 +39,7 @@ func GetOne(client *dynamodb.Client, tableName *string, output interface{}, keys
 		input.IndexName = indexName
 	}
 
-	queryOutput, err := client.Query(context.TODO(), input)
+	queryOutput, err := client.Query(ctx, input)
 	if err != nil {
 		return false, err
 	}
@@ -58,7 +58,7 @@ func GetOne(client *dynamodb.Client, tableName *string, output interface{}, keys
 	return false, nil
 }
 
-func AddOne(client *dynamodb.Client, tableName *string, item interface{}) error {
+func AddOne(ctx context.Context, client *dynamodb.Client, tableName *string, item interface{}) error {
 	fmt.Printf("item: %v\n", item)
 	marshalledItem, err := attributevalue.MarshalMap(item)
 	if err != nil {
@@ -70,8 +70,8 @@ func AddOne(client *dynamodb.Client, tableName *string, item interface{}) error 
 		Item:      marshalledItem,
 		TableName: tableName,
 	}
-
-	_, err = client.PutItem(context.Background(), input)
+	fmt.Println(ctx.Deadline())
+	_, err = client.PutItem(ctx, input)
 
 	if err != nil {
 		fmt.Printf("err: %v\n", err)
@@ -82,6 +82,7 @@ func AddOne(client *dynamodb.Client, tableName *string, item interface{}) error 
 }
 
 type ListArgs struct {
+	Ctx       context.Context
 	Client    *dynamodb.Client
 	TableName *string
 	Output    interface{}
@@ -128,7 +129,7 @@ func List(args ListArgs) (bool, map[string]types.AttributeValue, error) {
 		input.IndexName = args.IndexName
 	}
 
-	queryOutput, err := args.Client.Query(context.TODO(), input)
+	queryOutput, err := args.Client.Query(args.Ctx, input)
 	if err != nil {
 		return false, nil, err
 	}

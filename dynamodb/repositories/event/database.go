@@ -15,9 +15,9 @@ type Database struct {
 	TableName string
 }
 
-func (udb *Database) GetOne(eventId string) (*manager.Event, error) {
+func (udb *Database) GetOne(ctx context.Context, eventId string) (*manager.Event, error) {
 	event := &manager.Event{}
-	doesntExist, err := common.GetOne(udb.Client, &udb.TableName, event, map[string]interface{}{
+	doesntExist, err := common.GetOne(ctx, udb.Client, &udb.TableName, event, map[string]interface{}{
 		"id": eventId,
 	}, nil)
 
@@ -28,12 +28,12 @@ func (udb *Database) GetOne(eventId string) (*manager.Event, error) {
 	return event, err
 }
 
-func (udb *Database) Add(newEvent *manager.Event) error {
-	return common.AddOne(udb.Client, &udb.TableName, newEvent)
+func (udb *Database) Add(ctx context.Context, newEvent *manager.Event) error {
+	return common.AddOne(ctx, udb.Client, &udb.TableName, newEvent)
 }
 
-func (udb *Database) Delete(eventID string) error {
-	output, err := udb.Client.DeleteItem(context.TODO(), &dynamodb.DeleteItemInput{
+func (udb *Database) Delete(ctx context.Context, eventID string) error {
+	output, err := udb.Client.DeleteItem(ctx, &dynamodb.DeleteItemInput{
 		Key: map[string]types.AttributeValue{
 			"id": &types.AttributeValueMemberS{
 				Value: eventID,
